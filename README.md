@@ -156,10 +156,22 @@ A 3D math type (`float x, y, z`) with operators (`+`, `-`, `*`, `/`) and methods
 
 ### Usage Example
 
-```cpp
-// 1. Configure engine_config.hpp with your platform macros
+**Step 1 — Create your config file (one-time setup)**
 
-// 2. Define entity callbacks
+```sh
+cp engine_config.hpp.example engine_config.hpp
+```
+
+`engine_config.hpp` is listed in `.gitignore`, so `git pull` will never overwrite your changes.
+
+Open `engine_config.hpp` and uncomment/fill in the macros for your platform.
+
+The memory macros default to standard `new`/`delete`/`malloc`/`free` and only need changing on custom allocator platforms.
+
+**Step 2 onwards — Game code**
+
+```cpp
+// 1. Define entity callbacks
 void player_update(Entity *self, Game *game) {
     if (game->input == BUTTON_LEFT)
         self->position_set(self->position.x - self->speed, self->position.y);
@@ -173,7 +185,7 @@ void player_collision(Entity *self, Entity *other, Game *game) {
         self->health -= other->strength;
 }
 
-// 3. Create sprites and entities
+// 2. Create sprites and entities
 Image *sprite = new Image(Vector(16, 16), false, my_bitmap_data);
 Entity *player = new Entity(
     "player", ENTITY_PLAYER, Vector(64, 32), Vector(16, 16), sprite,
@@ -188,18 +200,18 @@ player->is_player = true;
 player->speed     = 1.5f;
 player->health    = player->max_health = 100.0f;
 
-// 4. Create the game, level, and add entities
+// 3. Create the game, level, and add entities
 Draw  *draw  = new Draw();
 Game  *game  = new Game("MyGame", Vector(256, 128), draw, 0x0000, 0xFFFF);
 Level *level = new Level("level1", Vector(256, 128), game);
 level->entity_add(player);
 game->level_add(level);
 
-// 5a. Blocking loop (bare-metal)
+// 4a. Blocking loop (bare-metal)
 GameEngine engine(game, 30.0f);
 engine.run();
 
-// 5b. Non-blocking loop (RTOS / cooperative scheduler)
+// 4b. Non-blocking loop (RTOS / cooperative scheduler)
 GameEngine engine(game, 30.0f);
 while (true) {
     engine.updateGameInput(read_buttons());
