@@ -5,6 +5,9 @@
 #include "../engine_config.hpp"
 #include ENGINE_LCD_INCLUDE
 #include <math.h>
+#ifdef ENGINE_LOG_INCLUDE
+#include ENGINE_LOG_INCLUDE
+#endif
 
 // Default Constructor
 Level::Level()
@@ -70,6 +73,7 @@ Entity **Level::collision_list(Entity *entity, int &count) const
     count = 0;
     if (entity_count == 0)
     {
+        ENGINE_LOG_INFO("Level::collision_list called but no entities are present");
         return nullptr;
     }
 
@@ -91,11 +95,13 @@ void Level::entity_add(Entity *entity)
 {
     if (!entity)
     {
+        ENGINE_LOG_INFO("Level::entity_add called with null entity pointer");
         return;
     }
 
     if (!this->gameRef)
     {
+        ENGINE_LOG_INFO("Level::entity_add called but level has no reference to game");
         return;
     }
 
@@ -103,6 +109,7 @@ void Level::entity_add(Entity *entity)
     Entity **newEntities = ENGINE_MEM_NEW Entity * [entity_count + 1];
     if (!newEntities)
     {
+        ENGINE_LOG_INFO("Level::entity_add failed to allocate memory for new entity array");
         return;
     }
 
@@ -131,7 +138,10 @@ void Level::entity_add(Entity *entity)
 void Level::entity_remove(Entity *entity)
 {
     if (entity_count == 0)
+    {
+        ENGINE_LOG_INFO("Level::entity_remove called but no entities are present");
         return;
+    }
 
     int remove_index = -1;
     for (int i = 0; i < entity_count; i++)
@@ -142,8 +152,12 @@ void Level::entity_remove(Entity *entity)
             break;
         }
     }
+
     if (remove_index == -1)
+    {
+        ENGINE_LOG_INFO("Level::entity_remove called but entity not found");
         return;
+    }
 
     // Stop and delete the entity (only if it's not a player - players are managed externally)
     entities[remove_index]->stop(this->gameRef);

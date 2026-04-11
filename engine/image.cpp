@@ -6,6 +6,10 @@
 #include ENGINE_STORAGE_INCLUDE
 #endif
 
+#ifdef ENGINE_LOG_INCLUDE
+#include ENGINE_LOG_INCLUDE
+#endif
+
 bool Image::getData(void *buffer, size_t buffer_size)
 {
     if (this->data != nullptr)
@@ -14,6 +18,7 @@ bool Image::getData(void *buffer, size_t buffer_size)
         size_t data_size = size.x * size.y * (is_8bit ? 1 : 2); // Calculate data size based on color depth
         if (data_size > buffer_size)
         {
+            ENGINE_LOG_INFO("Image::getData buffer too small for image data");
             return false; // Buffer too small
         }
         memcpy(buffer, this->data, data_size);
@@ -21,7 +26,10 @@ bool Image::getData(void *buffer, size_t buffer_size)
     }
 
     if (path == nullptr || path[0] == '\0')
+    {
+        ENGINE_LOG_INFO("Image::getData called but image path is null or empty");
         return false;
+    }
 #ifdef ENGINE_STORAGE_READ
     size_t bytes_read = ENGINE_STORAGE_READ(this->path, buffer, buffer_size);
     return bytes_read > 0;
@@ -39,11 +47,13 @@ void Image::render(Draw *draw, const Vector &position)
             uint8_t *data_buffer = (uint8_t *)ENGINE_MEM_MALLOC(size.x * size.y);
             if (!data_buffer)
             {
+                ENGINE_LOG_INFO("Image::render failed to allocate memory for 8-bit image data");
                 return;
             }
             if (!getData(data_buffer, size.x * size.y))
             {
                 ENGINE_MEM_FREE(data_buffer);
+                ENGINE_LOG_INFO("Image::render failed to get 8-bit image data");
                 return;
             }
             draw->image(position, data_buffer, size);
@@ -54,11 +64,13 @@ void Image::render(Draw *draw, const Vector &position)
             uint16_t *data_buffer = (uint16_t *)ENGINE_MEM_MALLOC(size.x * size.y * 2);
             if (!data_buffer)
             {
+                ENGINE_LOG_INFO("Image::render failed to allocate memory for 16-bit image data");
                 return;
             }
             if (!getData(data_buffer, size.x * size.y * 2))
             {
                 ENGINE_MEM_FREE(data_buffer);
+                ENGINE_LOG_INFO("Image::render failed to get 16-bit image data");
                 return;
             }
             draw->image(position, data_buffer, size);
@@ -76,11 +88,13 @@ void Image::render(Draw *draw, int16_t x, int16_t y)
             uint8_t *data_buffer = (uint8_t *)ENGINE_MEM_MALLOC(size.x * size.y);
             if (!data_buffer)
             {
+                ENGINE_LOG_INFO("Image::render failed to allocate memory for 8-bit image data");
                 return;
             }
             if (!getData(data_buffer, size.x * size.y))
             {
                 ENGINE_MEM_FREE(data_buffer);
+                ENGINE_LOG_INFO("Image::render failed to get 8-bit image data");
                 return;
             }
             draw->image(x, y, data_buffer, size.x, size.y);
@@ -91,11 +105,13 @@ void Image::render(Draw *draw, int16_t x, int16_t y)
             uint16_t *data_buffer = (uint16_t *)ENGINE_MEM_MALLOC(size.x * size.y * 2);
             if (!data_buffer)
             {
+                ENGINE_LOG_INFO("Image::render failed to allocate memory for 16-bit image data");
                 return;
             }
             if (!getData(data_buffer, size.x * size.y * 2))
             {
                 ENGINE_MEM_FREE(data_buffer);
+                ENGINE_LOG_INFO("Image::render failed to get 16-bit image data");
                 return;
             }
             draw->image(x, y, data_buffer, size.x, size.y);

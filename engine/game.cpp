@@ -1,5 +1,9 @@
 #include "game.hpp"
 
+#ifdef ENGINE_LOG_INCLUDE
+#include ENGINE_LOG_INCLUDE
+#endif
+
 Game::Game(
     const char *name,
     Vector size,
@@ -148,6 +152,7 @@ void Game::start()
 {
     if (this->levels[0] == nullptr)
     {
+        ENGINE_LOG_INFO("Game::start called but no levels are defined");
         return;
     }
     this->current_level = this->levels[0];
@@ -168,7 +173,10 @@ void Game::start()
 void Game::stop()
 {
     if (!this->is_active)
+    {
+        ENGINE_LOG_INFO("Game::stop called but game is not active");
         return;
+    }
 
     if (this->_stop)
         this->_stop();
@@ -193,6 +201,7 @@ void Game::update()
 {
     if (!this->is_active || this->current_level == nullptr)
     {
+        ENGINE_LOG_INFO("Game::update called but game is not active or current level is null");
         return;
     }
 

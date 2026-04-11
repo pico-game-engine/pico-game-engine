@@ -1,5 +1,9 @@
 #pragma once
 
+// logging
+// #define ENGINE_LOG_INCLUDE "example/log.hpp"
+#define ENGINE_LOG_INFO(...)
+
 // memory
 #define ENGINE_MEM_INCLUDE <new>
 #define ENGINE_MEM_NEW new

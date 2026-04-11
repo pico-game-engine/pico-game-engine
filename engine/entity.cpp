@@ -3,6 +3,10 @@
 #include "sprite3d.hpp"
 #include "image.hpp"
 
+#ifdef ENGINE_LOG_INCLUDE
+#include ENGINE_LOG_INCLUDE
+#endif
+
 Entity::Entity(
     const char *name,
     EntityType type,
@@ -230,6 +234,7 @@ void Entity::start(Game *game)
 {
     if (!game)
     {
+        ENGINE_LOG_INFO("Entity::start called with null game pointer");
         return;
     }
 
