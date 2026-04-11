@@ -2,7 +2,7 @@
 #include "game.hpp"
 #include "level.hpp"
 #include "sprite3d.hpp"
-#include "engine_config.hpp"
+#include "../engine_config.hpp"
 #include ENGINE_LCD_INCLUDE
 #include <math.h>
 

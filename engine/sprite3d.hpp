@@ -1,7 +1,7 @@
 #pragma once
 #include "triangle3d.hpp"
 #include "vector.hpp"
-#include "engine_config.hpp"
+#include "../engine_config.hpp"
 #include "math.h"
 
 #include ENGINE_MEM_INCLUDE

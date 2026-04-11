@@ -1,6 +1,6 @@
 #pragma once
 #include "vector.hpp"
-#include "engine_config.hpp"
+#include "../engine_config.hpp"
 
 #include ENGINE_FONT_INCLUDE
 #include ENGINE_MEM_INCLUDE
