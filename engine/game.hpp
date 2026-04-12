@@ -20,7 +20,7 @@ public:
         CallbackVoid start = {},         // Callback function for when the game starts
         CallbackVoid stop = {},          // Callback function for when the game stops
         CallbackVoid update = {});       // Callback function for when the game updates
-    ~Game();
+    virtual ~Game();
 
     void clamp(float &value, float min, float max); // Clamp a value between a lower and upper bound.
     Camera *getCamera() const { return camera; };   // Get current camera
@@ -28,11 +28,11 @@ public:
     void level_remove(Level *level);                // Remove a level from the game
     void level_switch(const char *name);            // Switch to a level by name
     void level_switch(int index);                   // Switch to a level by index
-    void render();                                  // Called every frame to render the game
+    virtual void render();                          // Called every frame to render the game
     void setCamera(const Camera &cameraContext);    // Set the current camera
-    void start();                                   // Called when the game starts
-    void stop();                                    // Called when the game stops
-    void update();                                  // Called every frame to update the game
+    virtual void start();                           // Called when the game starts
+    virtual void stop();                            // Called when the game stops
+    virtual void update();                          // Called every frame to update the game
 
     const char *name;          // Name of the game
     Level *levels[MAX_LEVELS]; // Array of levels

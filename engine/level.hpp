@@ -17,7 +17,7 @@ public:
           Game *game,
           CallbackLevel start = {},
           CallbackLevel stop = {});
-    ~Level();
+    virtual ~Level();
 
     // Member Functions
     void clear();
@@ -30,12 +30,12 @@ public:
     bool isClearAllowed() const noexcept { return clearAllowed; }
     bool is_collision(const Entity *a, const Entity *b) const;
     void project3DTo2D(Vector vertex, Vector player_pos, Vector player_dir, float view_height, Vector screen_size, Vector &result);
-    void render(Game *game);
+    virtual void render(Game *game);
     void render3DSprite(const Sprite3D *sprite3d, Draw *draw, Vector player_pos, Vector player_dir, float view_height);
     void setClearAllowed(bool status) { clearAllowed = status; }
-    void start();
-    void stop();
-    void update(Game *game);
+    virtual void start();
+    virtual void stop();
+    virtual void update(Game *game);
 
     const char *name;
     Vector size;
