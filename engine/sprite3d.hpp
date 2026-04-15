@@ -55,6 +55,7 @@ public:
     void setPosition(Vector pos) { position = pos; }
     void setRotation(float rot) { rotation_y = rot; }
     void setScale(float scale) { scale_factor = scale; }
+    void setWireframe(bool wireframe);
     void initializeAsHouse(Vector pos, float width, float height, float rot, uint16_t color = 0x0000, bool wireframe = true);
     void initializeAsHumanoid(Vector pos, float height, float rot, uint16_t color = 0x0000, bool wireframe = true);
     void initializeAsPillar(Vector pos, float height, float radius, uint16_t color = 0x0000, bool wireframe = true);

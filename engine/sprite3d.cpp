@@ -454,3 +454,14 @@ void Sprite3D::initializeAsTree(Vector pos, float height, uint16_t color, bool w
     active = true;
     createTree(height, color, wireframe);
 }
+
+void Sprite3D::setWireframe(bool wireframe)
+{
+    for (uint8_t i = 0; i < triangle_count; i++)
+    {
+        if (triangles[i])
+        {
+            triangles[i]->wireframe = wireframe;
+        }
+    }
+}
