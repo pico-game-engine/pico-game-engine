@@ -16,8 +16,8 @@ public:
 
     Triangle3D() : visible(true), distance(0), set(false), color(0x0000), wireframe(true) {}
 
-    Triangle3D(const Vector &v1, const Vector &v2, const Vector &v3, uint16_t color = 0x0000)
-        : visible(true), distance(0), set(true), color(color), wireframe(true)
+    Triangle3D(const Vector &v1, const Vector &v2, const Vector &v3, uint16_t color = 0x0000, bool wireframe = true)
+        : visible(true), distance(0), set(true), color(color), wireframe(wireframe)
     {
         x1 = v1.x;
         y1 = v1.y;
@@ -32,9 +32,9 @@ public:
 
     Triangle3D(float x1, float y1, float z1,
                float x2, float y2, float z2,
-               float x3, float y3, float z3, uint16_t color = 0x0000)
+               float x3, float y3, float z3, uint16_t color = 0x0000, bool wireframe = true)
         : x1(x1), y1(y1), z1(z1),
           x2(x2), y2(y2), z2(z2),
           x3(x3), y3(y3), z3(z3),
-          visible(true), distance(0), set(true), color(color), wireframe(true) {}
+          visible(true), distance(0), set(true), color(color), wireframe(wireframe) {}
 };
