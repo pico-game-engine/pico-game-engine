@@ -6,8 +6,6 @@
 
 #include ENGINE_MEM_INCLUDE
 
-#define MAX_TRIANGLES_PER_SPRITE 64
-
 typedef enum
 {
     SPRITE_HUMANOID = 0,
@@ -20,7 +18,7 @@ typedef enum
 class Sprite3D
 {
 private:
-    Triangle3D *triangles[MAX_TRIANGLES_PER_SPRITE];
+    Triangle3D *triangles[ENGINE_MAX_TRIANGLES_PER_SPRITE];
     uint8_t triangle_count;
     Vector position;
     float rotation_y;

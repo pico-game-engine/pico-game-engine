@@ -28,7 +28,7 @@ Sprite3D::~Sprite3D()
 
 void Sprite3D::addTriangle(const Triangle3D &triangle)
 {
-    if (triangle_count < MAX_TRIANGLES_PER_SPRITE)
+    if (triangle_count < ENGINE_MAX_TRIANGLES_PER_SPRITE)
     {
         triangles[triangle_count] = ENGINE_MEM_NEW Triangle3D(triangle);
         triangle_count++;
@@ -39,7 +39,7 @@ void Sprite3D::addTriangle(float x1, float y1, float z1,
                            float x2, float y2, float z2,
                            float x3, float y3, float z3, uint16_t color, bool wireframe)
 {
-    if (triangle_count < MAX_TRIANGLES_PER_SPRITE)
+    if (triangle_count < ENGINE_MAX_TRIANGLES_PER_SPRITE)
     {
         triangles[triangle_count] = ENGINE_MEM_NEW Triangle3D(x1, y1, z1, x2, y2, z2, x3, y3, z3, color, wireframe);
         triangle_count++;

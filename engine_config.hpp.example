@@ -1,5 +1,8 @@
 #pragma once
 
+// general
+#define ENGINE_MAX_TRIANGLES_PER_SPRITE 64
+
 // logging
 // #define ENGINE_LOG_INCLUDE "example/log.hpp"
 #define ENGINE_LOG_INFO(...)
