@@ -398,7 +398,7 @@ void Level::render(Game *game)
     }
 }
 
-void Level::render3DSprite(const Sprite3D *sprite3d, Draw *draw, Vector player_pos, Vector player_dir, float view_height)
+void Level::render3DSprite(const Sprite3D *sprite3d, Draw *draw, Vector player_pos, Vector player_dir, float view_height, bool clamp)
 {
     if (!sprite3d)
         return;
@@ -409,6 +409,7 @@ void Level::render3DSprite(const Sprite3D *sprite3d, Draw *draw, Vector player_p
     Vector screen_points[3];
     Vector vertex;
     Triangle3D triangle;
+    const Vector screenSize = draw->getDisplaySize();
     //
     const uint16_t triangle_count = sprite3d->getTriangleCount();
     for (uint16_t i = 0; i < triangle_count; i++)
@@ -450,7 +451,7 @@ void Level::render3DSprite(const Sprite3D *sprite3d, Draw *draw, Vector player_p
                     break;
                 };
 
-                project3DTo2D(vertex, player_pos, player_dir, view_height, draw->getDisplaySize(), screen_points[j]);
+                project3DTo2D(vertex, player_pos, player_dir, view_height, screenSize, screen_points[j]);
 
                 // Check if behind camera
                 if (screen_points[j].x == -1 && screen_points[j].y == -1)
@@ -465,6 +466,20 @@ void Level::render3DSprite(const Sprite3D *sprite3d, Draw *draw, Vector player_p
 
             if (any_visible && !has_behind)
             {
+                if (clamp)
+                {
+                    for (uint8_t k = 0; k < 3; k++)
+                    {
+                        if (screen_points[k].x < 0)
+                            screen_points[k].x = 0;
+                        if (screen_points[k].y < 0)
+                            screen_points[k].y = 0;
+                        if (screen_points[k].x > screenSize.x)
+                            screen_points[k].x = screenSize.x;
+                        if (screen_points[k].y > screenSize.y)
+                            screen_points[k].y = screenSize.y;
+                    }
+                }
                 draw->fillTriangle(screen_points[0].x, screen_points[0].y, screen_points[1].x, screen_points[1].y, screen_points[2].x, screen_points[2].y, triangle.color);
                 if (triangle.wireframe)
                 {
