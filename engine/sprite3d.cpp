@@ -1,5 +1,13 @@
 #include "sprite3d.hpp"
 
+#ifdef ENGINE_STORAGE_INCLUDE
+#include ENGINE_STORAGE_INCLUDE
+#endif
+
+#ifdef ENGINE_LOG_INCLUDE
+#include ENGINE_LOG_INCLUDE
+#endif
+
 // Shade an RGB565 color by a factor (< 1.0 darkens, > 1.0 lightens)
 static uint16_t shadeColor565(uint16_t color, float factor)
 {
@@ -396,6 +404,40 @@ bool Sprite3D::createWall(float x, float y, float z, float width, float height, 
     return true;
 }
 
+bool Sprite3D::fromPath(const char *path, bool wireframe)
+{
+#ifdef ENGINE_STORAGE_READ
+    clearTriangles();
+    Triangle3D *buf = ENGINE_MEM_NEW Triangle3D[ENGINE_MAX_TRIANGLES_PER_SPRITE];
+    if (!buf)
+    {
+        ENGINE_LOG_INFO("Sprite3D::fromPath failed to allocate memory for triangle data\n");
+        return false;
+    }
+    size_t bytes = ENGINE_STORAGE_READ(path, buf, sizeof(Triangle3D) * ENGINE_MAX_TRIANGLES_PER_SPRITE);
+    if (bytes == 0)
+    {
+        ENGINE_MEM_DELETE[] buf;
+        ENGINE_LOG_INFO("Sprite3D::fromPath failed to read triangle data from path: %s\n", path);
+        return false;
+    }
+    uint16_t count = bytes / sizeof(Triangle3D);
+    for (uint16_t i = 0; i < count; i++)
+    {
+        buf[i].wireframe = wireframe;
+        if (!addTriangle(buf[i]))
+        {
+            ENGINE_MEM_DELETE[] buf;
+            return false;
+        }
+    }
+    ENGINE_MEM_DELETE[] buf;
+    return true;
+#else
+    return false;
+#endif
+}
+
 Triangle3D Sprite3D::getTransformedTriangle(uint16_t index, const Vector &camera_pos) const
 {
     if (index >= triangle_count)
@@ -501,4 +543,24 @@ void Sprite3D::setWireframe(bool wireframe)
             triangles[i]->wireframe = wireframe;
         }
     }
+}
+
+bool Sprite3D::toPath(const char *path) const
+{
+#ifdef ENGINE_STORAGE_WRITE
+    if (triangle_count == 0)
+        return false;
+    if (triangle_count == ENGINE_MAX_TRIANGLES_PER_SPRITE)
+        return ENGINE_STORAGE_WRITE(path, triangles, sizeof(Triangle3D) * triangle_count);
+    Triangle3D *buf = ENGINE_MEM_NEW Triangle3D[triangle_count];
+    if (!buf)
+        return false;
+    for (uint16_t i = 0; i < triangle_count; i++)
+        buf[i] = *triangles[i];
+    const bool ok = ENGINE_STORAGE_WRITE(path, buf, sizeof(Triangle3D) * triangle_count);
+    ENGINE_MEM_DELETE[] buf;
+    return ok;
+#else
+    return false;
+#endif
 }
