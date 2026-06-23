@@ -42,6 +42,7 @@ public:
     bool createCylinder(float x, float y, float z, float radius, float height, uint8_t segments, uint16_t color = 0x0000, bool wireframe = true);
     bool createSphere(float x, float y, float z, float radius, uint8_t segments, uint16_t color = 0x0000, bool wireframe = true);
     bool createTriangularPrism(float x, float y, float z, float width, float height, float depth, uint16_t color = 0x0000, bool wireframe = true);
+    bool fromPath(const char *path, bool wireframe = true);
     Vector getPosition() const { return position; }
     float getRotation() const { return rotation_y; }
     float getScale() const { return scale_factor; }
@@ -58,4 +59,5 @@ public:
     void setRotation(float rot) { rotation_y = rot; }
     void setScale(float scale) { scale_factor = scale; }
     void setWireframe(bool wireframe);
+    bool toPath(const char *path) const;
 };
