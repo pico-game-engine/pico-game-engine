@@ -48,14 +48,14 @@ public:
     Triangle3D getTransformedTriangle(uint16_t index, const Vector &camera_pos) const;
     uint16_t getTriangleCount() const { return triangle_count; }
     SpriteType getType() const { return type; }
+    bool initializeAsHouse(Vector pos, float width, float height, float rot, uint16_t color = 0x0000, bool wireframe = true);
+    bool initializeAsHumanoid(Vector pos, float height, float rot, uint16_t color = 0x0000, bool wireframe = true);
+    bool initializeAsPillar(Vector pos, float height, float radius, uint16_t color = 0x0000, bool wireframe = true);
+    bool initializeAsTree(Vector pos, float height, uint16_t color = 0x0000, bool wireframe = true);
     bool isActive() const { return active; }
     void setActive(bool state) { active = state; }
     void setPosition(Vector pos) { position = pos; }
     void setRotation(float rot) { rotation_y = rot; }
     void setScale(float scale) { scale_factor = scale; }
     void setWireframe(bool wireframe);
-    bool initializeAsHouse(Vector pos, float width, float height, float rot, uint16_t color = 0x0000, bool wireframe = true);
-    bool initializeAsHumanoid(Vector pos, float height, float rot, uint16_t color = 0x0000, bool wireframe = true);
-    bool initializeAsPillar(Vector pos, float height, float radius, uint16_t color = 0x0000, bool wireframe = true);
-    bool initializeAsTree(Vector pos, float height, uint16_t color = 0x0000, bool wireframe = true);
 };
