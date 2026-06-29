@@ -494,6 +494,31 @@ void Level::render3DSprite(const Sprite3D *sprite3d, Draw *draw, Vector player_p
     }
 }
 
+void Level::render3DSprite(const char *path, Draw *draw, Vector player_pos, Vector player_dir, float view_height, bool clamp, bool wireframe)
+{
+    if (!path)
+        return;
+
+    Sprite3D *sprite3d = ENGINE_MEM_NEW Sprite3D();
+    if (!sprite3d)
+    {
+        ENGINE_LOG_INFO("Level::render3DSprite failed to allocate memory for Sprite3D\n");
+        return;
+    }
+    if (!sprite3d->fromPath(path, wireframe))
+    {
+        ENGINE_LOG_INFO("Level::render3DSprite failed to load Sprite3D from path: %s\n", path);
+        ENGINE_MEM_DELETE sprite3d;
+        sprite3d = nullptr;
+        return;
+    }
+
+    render3DSprite(sprite3d, draw, player_pos, player_dir, view_height, clamp);
+
+    ENGINE_MEM_DELETE sprite3d;
+    sprite3d = nullptr;
+}
+
 // Start the level
 void Level::start()
 {

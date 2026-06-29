@@ -32,6 +32,7 @@ public:
     void project3DTo2D(Vector vertex, Vector player_pos, Vector player_dir, float view_height, Vector screen_size, Vector &result);
     virtual void render(Game *game);
     void render3DSprite(const Sprite3D *sprite3d, Draw *draw, Vector player_pos, Vector player_dir, float view_height, bool clamp = false);
+    void render3DSprite(const char *path, Draw *draw, Vector player_pos, Vector player_dir, float view_height, bool clamp = false, bool wireframe = true);
     void setClearAllowed(bool status) { clearAllowed = status; }
     virtual void start();
     virtual void stop();
