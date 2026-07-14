@@ -23,6 +23,7 @@ public:
     void fillScreen(uint16_t color = 0xFFFF);                                                                                 // Fills the entire screen with the specified color.
     void fillTriangle(Vector p1, Vector p2, Vector p3, uint16_t color = 0x0000);                                              // Fills a triangle defined by three vertices with the specified color.
     void fillTriangle(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, uint16_t color = 0x0000); // Fills a triangle defined by three vertices with the specified color.
+    void fillTriangleAlpha(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t x3, uint16_t y3, uint16_t color, uint8_t alpha); // Fills a triangle with alpha blending
     uint16_t getCurrentTextColor() const noexcept { return currentTextColor; }                                                // Returns the current drawing color.
     Vector getDisplaySize() const noexcept;                                                                                   // Returns the size of the display.
     ENGINE_FONT_SIZE getCurrentFontSize() const noexcept { return currentFontSize; }                                          // Returns the current font size.
