@@ -104,13 +104,10 @@ void Level::drawProjectedTriangle(Draw *draw, const Vector vertices[3], const Ve
         x[i] = static_cast<uint16_t>(polygon[i].x);
         y[i] = static_cast<uint16_t>(polygon[i].y);
     }
-    for (int i = 1; i + 1 < count; ++i)
-    {
-        if (alpha == 255)
-            draw->fillTriangle(x[0], y[0], x[i], y[i], x[i + 1], y[i + 1], color);
-        else
-            draw->fillTriangleAlpha(x[0], y[0], x[i], y[i], x[i + 1], y[i + 1], color, alpha);
-    }
+    if (alpha == 255)
+        draw->fillPolygon(x, y, count, color);
+    else
+        draw->fillPolygonAlpha(x, y, count, color, alpha);
     if (wireframe)
     {
         uint8_t r = (color >> 11) & 0x1F;
@@ -120,18 +117,7 @@ void Level::drawProjectedTriangle(Draw *draw, const Vector vertices[3], const Ve
         g += (0x3F - g) >> 1;
         b += (0x1F - b) >> 1;
         const uint16_t outline = ((uint16_t)r << 11) | ((uint16_t)g << 5) | b;
-        if (count == 3)
-        {
-            draw->triangle(x[0], y[0], x[1], y[1], x[2], y[2], outline);
-        }
-        else
-        {
-            for (int i = 0; i < count; ++i)
-            {
-                const int next = (i + 1) % count;
-                draw->line(x[i], y[i], x[next], y[next], outline);
-            }
-        }
+        draw->polygon(x, y, count, outline);
     }
 }
 
