@@ -458,7 +458,7 @@ bool Sprite3D::getTransformedTriangle(uint16_t index, const Vector &camera_pos, 
     if (index >= triangle_count)
         return false;
 
-    out = *triangles[index];
+    out = triangles[index];
 
     // Fast path: identity rotation/scale (static scenery) -> translate only
     if (rotation_y == 0.0f && scale_factor == 1.0f)
@@ -589,10 +589,7 @@ void Sprite3D::setWireframe(bool wireframe)
 {
     for (uint16_t i = 0; i < triangle_count; i++)
     {
-        if (triangles[i])
-        {
-            triangles[i]->wireframe = wireframe;
-        }
+        triangles[i].wireframe = wireframe;
     }
 }
 
@@ -606,29 +603,27 @@ bool Sprite3D::bakeTransform()
 
     for (uint16_t i = 0; i < triangle_count; i++)
     {
-        Triangle3D *t = triangles[i];
-        if (!t)
-            continue;
+        Triangle3D &t = triangles[i];
 
-        t->x1 *= scale_factor;
-        t->y1 *= scale_factor;
-        t->z1 *= scale_factor;
-        t->x2 *= scale_factor;
-        t->y2 *= scale_factor;
-        t->z2 *= scale_factor;
-        t->x3 *= scale_factor;
-        t->y3 *= scale_factor;
-        t->z3 *= scale_factor;
+        t.x1 *= scale_factor;
+        t.y1 *= scale_factor;
+        t.z1 *= scale_factor;
+        t.x2 *= scale_factor;
+        t.y2 *= scale_factor;
+        t.z2 *= scale_factor;
+        t.x3 *= scale_factor;
+        t.y3 *= scale_factor;
+        t.z3 *= scale_factor;
 
-        float ox = t->x1;
-        t->x1 = ox * cos_a - t->z1 * sin_a;
-        t->z1 = ox * sin_a + t->z1 * cos_a;
-        ox = t->x2;
-        t->x2 = ox * cos_a - t->z2 * sin_a;
-        t->z2 = ox * sin_a + t->z2 * cos_a;
-        ox = t->x3;
-        t->x3 = ox * cos_a - t->z3 * sin_a;
-        t->z3 = ox * sin_a + t->z3 * cos_a;
+        float ox = t.x1;
+        t.x1 = ox * cos_a - t.z1 * sin_a;
+        t.z1 = ox * sin_a + t.z1 * cos_a;
+        ox = t.x2;
+        t.x2 = ox * cos_a - t.z2 * sin_a;
+        t.z2 = ox * sin_a + t.z2 * cos_a;
+        ox = t.x3;
+        t.x3 = ox * cos_a - t.z3 * sin_a;
+        t.z3 = ox * sin_a + t.z3 * cos_a;
     }
 
     rotation_y = 0.0f;
@@ -647,7 +642,7 @@ bool Sprite3D::toPath(const char *path) const
     if (!buf)
         return false;
     for (uint16_t i = 0; i < triangle_count; i++)
-        buf[i] = *triangles[i];
+        buf[i] = triangles[i];
     const bool ok = ENGINE_STORAGE_WRITE(path, buf, sizeof(Triangle3D) * triangle_count);
     ENGINE_MEM_DELETE[] buf;
     return ok;
