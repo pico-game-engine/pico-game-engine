@@ -28,6 +28,7 @@ Entity::Entity(
     this->type = type;
     this->position = position;
     this->old_position = position;
+    this->moved = false;
     this->direction = Vector(1, 0, 0, true);
     this->plane = Vector(0, 0);
     this->size = size;
@@ -170,6 +171,8 @@ Vector Entity::position_get()
 
 void Entity::position_set(Vector value)
 {
+    if (position != value)
+        moved = true;
     this->old_position.x = this->position.x;
     this->old_position.y = this->position.y;
     this->old_position.z = this->position.z;
@@ -188,6 +191,8 @@ void Entity::position_set(Vector value)
 
 void Entity::position_set(float x, float y, float z, bool integer)
 {
+    if (position.x != x || position.y != y || position.z != z)
+        moved = true;
     this->old_position.x = this->position.x;
     this->old_position.y = this->position.y;
     this->old_position.z = this->position.z;

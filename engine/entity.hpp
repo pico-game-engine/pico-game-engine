@@ -50,6 +50,7 @@ public:
     const char *name;    // The name of the entity.
     Vector position;     // The position of the entity.
     Vector old_position; // The old position of the entity.
+    bool moved;
     Vector direction;    // The direction the entity is facing.
     Vector plane;        // The camera plane perpendicular to the direction.
     bool is_player;      // Indicates if the entity is the player.
