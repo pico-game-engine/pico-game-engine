@@ -23,10 +23,10 @@ static uint16_t shadeColor565(uint16_t color, float factor)
     return ((uint16_t)r << 11) | ((uint16_t)g << 5) | b;
 }
 
-Sprite3D::Sprite3D() : triangle_count(0), position(Vector(0, 0)), rotation_y(0),
+Sprite3D::Sprite3D() : triangles(nullptr), triangle_count(0), position(Vector(0, 0)), rotation_y(0),
                        scale_factor(1.0f), type(SPRITE_CUSTOM), active(false)
 {
-    memset(triangles, 0, sizeof(triangles));
+    triangles = nullptr;
 }
 
 Sprite3D::~Sprite3D()
@@ -36,41 +36,40 @@ Sprite3D::~Sprite3D()
 
 bool Sprite3D::addTriangle(const Triangle3D &triangle)
 {
-    if (triangle_count < ENGINE_MAX_TRIANGLES_PER_SPRITE)
-    {
-        triangles[triangle_count] = ENGINE_MEM_NEW Triangle3D(triangle);
-        if (triangles[triangle_count] != nullptr)
-        {
-            triangle_count++;
-            return true;
-        }
-    }
-    return false;
+    if (triangle_count >= ENGINE_MAX_TRIANGLES_PER_SPRITE)
+        return false;
+
+    Triangle3D *new_block = (Triangle3D *)ENGINE_MEM_MALLOC(
+        (triangle_count + 1) * sizeof(Triangle3D));
+    if (!new_block)
+        return false;
+
+    if (triangle_count > 0)
+        memcpy(new_block, triangles, triangle_count * sizeof(Triangle3D));
+
+    if (triangles != nullptr)
+        ENGINE_MEM_FREE(triangles);
+    triangles = new_block;
+
+    new_block[triangle_count] = triangle;
+    triangle_count++;
+    return true;
 }
 
 bool Sprite3D::addTriangle(float x1, float y1, float z1,
                            float x2, float y2, float z2,
-                           float x3, float y3, float z3, uint16_t color, bool wireframe)
+                           float x3, float y3, float z3,
+                           uint16_t color, bool wireframe)
 {
-    if (triangle_count < ENGINE_MAX_TRIANGLES_PER_SPRITE)
-    {
-        triangles[triangle_count] = ENGINE_MEM_NEW Triangle3D(x1, y1, z1, x2, y2, z2, x3, y3, z3, color, wireframe);
-        if (triangles[triangle_count] != nullptr)
-        {
-            triangle_count++;
-            return true;
-        }
-    }
-    return false;
+    return addTriangle(Triangle3D(x1, y1, z1, x2, y2, z2, x3, y3, z3,
+                                  color, wireframe));
 }
 
 void Sprite3D::clearTriangles()
 {
-    for (uint16_t i = 0; i < triangle_count; i++)
-    {
-        ENGINE_MEM_DELETE triangles[i];
-        triangles[i] = nullptr;
-    }
+    if (triangles != nullptr)
+        ENGINE_MEM_FREE(triangles);
+    triangles = nullptr;
     triangle_count = 0;
 }
 
