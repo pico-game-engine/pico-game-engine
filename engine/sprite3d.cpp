@@ -1029,7 +1029,8 @@ Sprite3D::BufferResult Sprite3D::loadBuffer(const void *records, size_t size, Bo
 Sprite3D::BufferResult Sprite3D::transformBuffer(const void *source, size_t size, void *target,
                                                  size_t targetSize, TransformKind kind,
                                                  const double amount[3], const double pivot[3],
-                                                 const uint8_t *mask, size_t maskSize, Bounds *bounds)
+                                                 const uint8_t *mask, size_t maskSize, Bounds *bounds,
+                                               void (*beforeWrite)(const Bounds &, void *), void *context)
 {
     using namespace sprite3d_buffer;
     BufferResult result = validate(source, size);
@@ -1076,6 +1077,8 @@ Sprite3D::BufferResult Sprite3D::transformBuffer(const void *source, size_t size
             extend(calculated, point);
         }
     }
+    if (beforeWrite)
+        beforeWrite(calculated, context);
     // All validation has finished. Retain material, wireframe and padding bytes.
     uint8_t *out = static_cast<uint8_t *>(target);
     if (size)

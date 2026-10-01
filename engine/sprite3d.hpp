@@ -111,11 +111,15 @@ public:
     // Rotation uses degrees in XYZ order; scale components must be in (0, 1e6].
     // Validate the whole result before writing; failure leaves target/bounds unchanged.
     // Values, pivot and bounds must not overlap the destination buffer.
+    // Optional beforeWrite runs after validation, before any mutation. Bindings
+    // can allocate their result there; a raised exception leaves target unchanged.
     static BufferResult transformBuffer(const void *source, size_t size, void *target,
                                        size_t targetSize, TransformKind kind,
                                        const double values[3], const double pivot[3],
                                        const uint8_t *mask = nullptr, size_t maskSize = 0,
-                                       Bounds *bounds = nullptr);
+                                       Bounds *bounds = nullptr,
+                                       void (*beforeWrite)(const Bounds &, void *) = nullptr,
+                                       void *context = nullptr);
 
     Vector getPosition() const { return position; }
     bool getTriangle(uint16_t index, Triangle3D &out) const;
