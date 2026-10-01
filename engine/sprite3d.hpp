@@ -3,6 +3,11 @@
 #include "vector.hpp"
 #include "../engine_config.hpp"
 #include "math.h"
+#include <cstddef>
+#include <cstdint>
+
+// Bindings can compile against older engine snapshots without these optional APIs.
+#define ENGINE_SPRITE3D_BUFFER_API 1
 
 #include ENGINE_MEM_INCLUDE
 
@@ -24,6 +29,7 @@ class Sprite3D
 private:
     Triangle3D *triangles;
     uint16_t triangle_count;
+    uint16_t triangle_capacity;
     Vector position;
     float rotation_y;
     float scale_factor;
@@ -34,9 +40,50 @@ private:
                          float &out_x, float &out_y, float &out_z) const;
 
 public:
+    enum class BufferResult
+    {
+        Ok,
+        InvalidBuffer,
+        InvalidValue,
+        TriangleLimit,
+        OutOfMemory,
+        NotEmpty
+    };
+
+    enum class TransformKind { Move, Scale, Rotate };
+
+    struct Bounds
+    {
+        double low[3];
+        double high[3];
+    };
+
+    // View-space basis rows map model coordinates to screen X, screen Y, depth.
+    // Orthographic previews compensate for the engine's perspective projection.
+    struct PreviewOptions
+    {
+        double center[3] = {0, 0, 0};
+        double basis[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+        double distance = 1;
+        double orthoDistance = 1;
+        double scale = 1;
+        double panelScale = 1;
+        double offsetX = 0;
+        double offsetY = 0;
+        double aspect = 1;
+        double edge = 1;
+        bool panel = false;
+        bool orthographic = false;
+        bool culling = false;
+        bool facing = false;
+        int wireframe = -1; // -1 preserves each record; 0 solid; 1 wireframe.
+    };
+
     Sprite3D();
     ~Sprite3D();
 
+    // Allocation failure preserves geometry. clearTriangles releases capacity.
+    bool reserveTriangles(uint16_t capacity);
     bool addTriangle(const Triangle3D &triangle);
     bool addTriangle(float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, uint16_t color = 0x0000, bool wireframe = true);
     bool bakeTransform();
@@ -51,6 +98,25 @@ public:
     bool createSphere(float x, float y, float z, float radius, uint8_t segments, uint16_t color = 0x0000, bool wireframe = true);
     bool createTriangularPrism(float x, float y, float z, float width, float height, float depth, uint16_t color = 0x0000, bool wireframe = true);
     bool fromPath(const char *path, bool wireframe = true);
+
+    // Packed records: nine little-endian IEEE-754 floats, RGB565 uint16,
+    // wireframe byte (0/1), and one opaque byte: 40 bytes per triangle.
+    // Coordinates must be finite and within +/-1e12. Unaligned data is allowed.
+    // Construction requires an empty mesh and leaves it empty on failure.
+    BufferResult loadBuffer(const void *records, size_t size, Bounds *bounds = nullptr);
+    BufferResult buildPreview(const void *records, size_t size, const PreviewOptions &options);
+
+    // No allocation. Source and destination must be disjoint, equal-sized buffers.
+    // Optional mask has one byte per vertex. Zero means leave that vertex unchanged.
+    // Rotation uses degrees in XYZ order; scale components must be in (0, 1e6].
+    // Validate the whole result before writing; failure leaves target/bounds unchanged.
+    // Values, pivot and bounds must not overlap the destination buffer.
+    static BufferResult transformBuffer(const void *source, size_t size, void *target,
+                                       size_t targetSize, TransformKind kind,
+                                       const double values[3], const double pivot[3],
+                                       const uint8_t *mask = nullptr, size_t maskSize = 0,
+                                       Bounds *bounds = nullptr);
+
     Vector getPosition() const { return position; }
     bool getTriangle(uint16_t index, Triangle3D &out) const;
     bool getTriangle(uint16_t index, float &x1, float &y1, float &z1,
