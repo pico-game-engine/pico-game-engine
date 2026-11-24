@@ -35,6 +35,7 @@ private:
     bool psramAllowed;
     float rotation_y;
     float scale_factor;
+    bool depthSortEnabled;
     uint16_t triangle_capacity;
     uint16_t triangle_count;
     Triangle3D *triangles;
@@ -79,7 +80,7 @@ public:
     bool getWorldTriangle(uint16_t index, Triangle3D &out) const;
     float getRotation() const { return rotation_y; }
     float getScale() const { return scale_factor; }
-    bool getTransformedTriangle(uint16_t index, const Vector &camera_pos, Triangle3D &out) const;
+    bool getTransformedTriangle(uint16_t index, const Vector &camera_pos, Triangle3D &out, float camera_height = 0.5f) const;
     uint16_t getTriangleCount() const { return triangle_count; }
     SpriteType getType() const { return type; }
     bool initializeAsHouse(Vector pos, float width, float height, float rot, uint16_t color = 0x0000, bool wireframe = true);
@@ -92,8 +93,10 @@ public:
     void setPosition(Vector pos) { position = pos; }
     void setRotation(float rot) { rotation_y = rot; }
     void setScale(float scale) { scale_factor = scale; }
+    void setDepthSortEnabled(bool enabled) { depthSortEnabled = enabled; }
     void setWireframe(bool wireframe);
     bool toPath(const char *path) const;
+    bool isDepthSortEnabled() const { return depthSortEnabled; }
     bool updateTriangle(uint16_t index, const Triangle3D &triangle);
     bool updateTriangle(uint16_t index, float x1, float y1, float z1,
                         float x2, float y2, float z2,
