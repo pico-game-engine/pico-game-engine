@@ -39,6 +39,9 @@ public:
     virtual void render(Game *game, bool clamp = false);
     void render3DSprite(const Sprite3D *sprite3d, Draw *draw, const Vector &player_pos, const Vector &player_dir, float view_height, bool clamp = false, bool drawShadow = false);
     void render3DSprite(const char *path, Draw *draw, const Vector &player_pos, const Vector &player_dir, float view_height, bool clamp = false, bool wireframe = true, bool drawShadow = false);
+    // Optional opaque mesh depth; 2 bytes per pixel in PSRAM when available.
+    // Wireframe, alpha shadows, billboards and 2D draws retain their existing paths.
+    bool setDepthTestEnabled(bool enabled);
     void setClearAllowed(bool status) { clearAllowed = status; }
     void setLightDirection(float x, float y, float z);
     void setGame(Game *game) { gameRef = game; }
@@ -51,6 +54,8 @@ public:
     Vector size;
 
 private:
+    struct DepthBuffer;
+    DepthBuffer *depthBuffer;
     bool projectBillboard(const Camera &cam, const Vector &epos, float world_height,
                           int16_t &out_x, int16_t &out_y, uint16_t &out_w, uint16_t &out_h);
     void drawProjectedTriangle(Draw *draw, const Vector vertices[3], const Vector &screen, uint16_t color, bool wireframe, bool clamp, uint8_t alpha = 255);

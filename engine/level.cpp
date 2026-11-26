@@ -10,10 +10,199 @@
 #include ENGINE_LOG_INCLUDE
 #endif
 
+// Allocated only for levels which explicitly enable opaque mesh depth testing.
+// Uses the existing PSRAM arena on embedded targets and one scanline of RAM.
+struct Level::DepthBuffer
+{
+    uint16_t width = 0, height = 0;
+    uint16_t *depth = nullptr, *scratch = nullptr, *colors = nullptr;
+    uint8_t *covered = nullptr;
+#ifdef ENGINE_USE_PSRAM
+    uint32_t address = TrianglePSRAM::INVALID;
+#endif
+    void read(int y, int x, int n)
+    {
+#ifdef ENGINE_USE_PSRAM
+        ENGINE_PSRAM_READ(address + 2 * (y * width + x), scratch + x, 2 * n);
+#else
+        memcpy(scratch + x, depth + y * width + x, 2 * n);
+#endif
+    }
+    void write(int y, int x, int n)
+    {
+#ifdef ENGINE_USE_PSRAM
+        ENGINE_PSRAM_WRITE(address + 2 * (y * width + x), scratch + x, 2 * n);
+#else
+        memcpy(depth + y * width + x, scratch + x, 2 * n);
+#endif
+    }
+    // Positive float ordering is preserved with 11 mantissa bits and five
+    // exponent bits. Avoid a reciprocal and two libm clamps for every pixel.
+    // Normal game depths (near plane 0.1 through 256 units) fit without clamping.
+    static uint16_t encodeInverse(float inverse)
+    {
+        if (!(inverse > 0))
+            return 0;
+        uint32_t bits;
+        static_assert(sizeof(bits) == sizeof(inverse), "32-bit float required");
+        memcpy(&bits, &inverse, sizeof(bits));
+        const uint32_t compact = bits >> 12, bias = 110u << 11;
+        if (compact <= bias)
+            return 1;
+        if (compact >= bias + 65535)
+            return 65535;
+        return uint16_t(compact - bias);
+    }
+    void finish(int y, int left, int right, Draw *draw)
+    {
+        write(y, left, right - left + 1);
+        for (int x = left; x <= right;)
+        {
+            while (x <= right && !covered[x])
+                ++x;
+            const int start = x;
+            while (x <= right && covered[x])
+                ++x;
+            if (x > start)
+                draw->image(start, y, colors + start, x - start, 1);
+        }
+    }
+
+  public:
+    ~DepthBuffer()
+    {
+        ENGINE_MEM_FREE(depth);
+        ENGINE_MEM_FREE(scratch);
+#ifdef ENGINE_USE_PSRAM
+        if (address != TrianglePSRAM::INVALID)
+            TrianglePSRAM::release();
+#endif
+    }
+    DepthBuffer() = default;
+    DepthBuffer(const DepthBuffer &) = delete;
+    DepthBuffer &operator=(const DepthBuffer &) = delete;
+    bool init(uint16_t w, uint16_t h)
+    {
+        if (!w || !h || w > 2048 || h > 2048 || width)
+            return false;
+        scratch = static_cast<uint16_t *>(ENGINE_MEM_MALLOC(w * 5));
+        if (!scratch)
+            return false;
+        colors = scratch + w;
+        covered = reinterpret_cast<uint8_t *>(colors + w);
+#ifdef ENGINE_USE_PSRAM
+        address = TrianglePSRAM::reserveBytes(uint32_t(w) * h * 2);
+        if (address == TrianglePSRAM::INVALID)
+            return false;
+        TrianglePSRAM::retain();
+#else
+        depth = static_cast<uint16_t *>(ENGINE_MEM_MALLOC(size_t(w) * h * 2));
+        if (!depth)
+            return false;
+#endif
+        width = w;
+        height = h;
+        return true;
+    }
+    void clear()
+    {
+        memset(scratch, 0, width * 2);
+        for (int y = 0; y < height; ++y)
+            write(y, 0, width);
+    }
+    void triangle(const Vector vertices[3], const float uv[6], uint16_t tint, const uint16_t *texture,
+                  uint16_t tw, uint16_t th, Draw *draw)
+    {
+        float minY = height, maxY = 0;
+        for (int i = 0; i < 3; ++i)
+        {
+            if (!isfinite(vertices[i].x) || !isfinite(vertices[i].y) || !isfinite(vertices[i].z) ||
+                !isfinite(uv[i * 2]) || !isfinite(uv[i * 2 + 1]))
+                return;
+            minY = fminf(minY, vertices[i].y);
+            maxY = fmaxf(maxY, vertices[i].y);
+        }
+        const int first = int(ceilf(fmaxf(0, fminf(height, minY - .5f))));
+        const int last = int(ceilf(fmaxf(0, fminf(height, maxY - .5f)))) - 1;
+        for (int y = first; y <= last; ++y)
+        {
+            Vector ends[2];
+            float endsUv[4];
+            int found = 0;
+            const float sy = y + .5f;
+            for (int j = 0; j < 3; ++j)
+            {
+                const int next = (j + 1) % 3;
+                const Vector &a = vertices[j], &b = vertices[next];
+                if ((sy >= a.y && sy < b.y) || (sy >= b.y && sy < a.y))
+                {
+                    const float f = (sy - a.y) / (b.y - a.y);
+                    ends[found] = Vector(a.x + f * (b.x - a.x), sy, a.z + f * (b.z - a.z));
+                    endsUv[found * 2] = uv[j * 2] + f * (uv[next * 2] - uv[j * 2]);
+                    endsUv[found * 2 + 1] = uv[j * 2 + 1] + f * (uv[next * 2 + 1] - uv[j * 2 + 1]);
+                    ++found;
+                }
+            }
+            if (found != 2)
+                continue;
+            if (ends[0].x > ends[1].x)
+            {
+                const Vector swap = ends[0];
+                ends[0] = ends[1];
+                ends[1] = swap;
+                for (int i = 0; i < 2; ++i)
+                {
+                    float value = endsUv[i];
+                    endsUv[i] = endsUv[i + 2];
+                    endsUv[i + 2] = value;
+                }
+            }
+            const float span = ends[1].x - ends[0].x;
+            if (span <= 0)
+                continue;
+            const int left = int(ceilf(fmaxf(0, fminf(width, ends[0].x - .5f))));
+            const int right = int(ceilf(fmaxf(0, fminf(width, ends[1].x - .5f)))) - 1;
+            if (right < left)
+                continue;
+            read(y, left, right - left + 1);
+            memset(covered + left, 0, right - left + 1);
+            bool changed = false;
+            const float inverseStep = (ends[1].z - ends[0].z) / span;
+            float inverse = ends[0].z + (left + .5f - ends[0].x) * inverseStep;
+            for (int x = left; x <= right; ++x, inverse += inverseStep)
+            {
+                const uint16_t z = encodeInverse(inverse);
+                if (z <= scratch[x])
+                    continue;
+                uint16_t color = tint;
+                if (texture && tw && th)
+                {
+                    const float f = (x + .5f - ends[0].x) / span;
+                    const float u = endsUv[0] + f * (endsUv[2] - endsUv[0]),
+                                v = endsUv[1] + f * (endsUv[3] - endsUv[1]);
+                    const int tx = int(fmaxf(0, fminf(tw - 1, u * tw))),
+                              ty = int(fmaxf(0, fminf(th - 1, v * th)));
+                    const uint16_t texel = texture[ty * tw + tx];
+                    const unsigned r = (texel >> 11) & 31, g = (texel >> 5) & 63, b = texel & 31;
+                    color = uint16_t(((r * ((tint >> 11) & 31) / 31) << 11) |
+                                     ((g * ((tint >> 5) & 63) / 63) << 5) | (b * (tint & 31) / 31));
+                }
+                colors[x] = color;
+                scratch[x] = z;
+                covered[x] = 1;
+                changed = true;
+            }
+            if (changed)
+                finish(y, left, right, draw);
+        }
+    }
+};
+
 // Default Constructor
 Level::Level()
     : name(""),
       size(Vector(0, 0)),
+      depthBuffer(nullptr),
       clearAllowed(true),
       gameRef(nullptr),
       entity_count(0),
@@ -35,6 +224,7 @@ Level::Level()
 Level::Level(const char *name, const Vector &size, Game *game, CallbackLevel start, CallbackLevel stop)
     : name(name),
       size(size),
+      depthBuffer(nullptr),
       clearAllowed(true),
       gameRef(game),
       entity_count(0),
@@ -86,6 +276,8 @@ void Level::clear()
     ENGINE_MEM_FREE(spriteTriangleDepths);
     spriteTriangleDepths = nullptr;
     spriteTriangleCapacity = 0;
+    ENGINE_MEM_DELETE depthBuffer;
+    depthBuffer = nullptr;
 }
 
 // Get list of collisions for a given entity
@@ -113,6 +305,12 @@ Entity **Level::collision_list(Entity *entity, int &count) const
 
 void Level::drawProjectedTriangle(Draw *draw, const Vector vertices[3], const Vector &screen, uint16_t color, bool wireframe, bool clamp, uint8_t alpha)
 {
+    if (depthBuffer && !wireframe && alpha == 255)
+    {
+        const float uv[6] = {};
+        drawProjectedTexturedTriangle(draw, vertices, uv, screen, nullptr, 0, 0, color, false);
+        return;
+    }
     Vector polygon[ENGINE_MAX_PROJECTION_VERTICES];
     const int count = projectionProject(vertices, screen.x, screen.y, clamp, polygon);
     if (count < 3)
@@ -144,7 +342,8 @@ void Level::drawProjectedTexturedTriangle(Draw *draw, const Vector vertices[3], 
                                           const uint16_t *texture, uint16_t texture_width, uint16_t texture_height,
                                           uint16_t tint, bool wireframe)
 {
-    if (!draw || !vertices || !uv || !texture || texture_width == 0 || texture_height == 0 ||
+    if (!draw || !vertices || !uv ||
+        ((!texture || texture_width == 0 || texture_height == 0) && !depthBuffer) ||
         screen.x < 1 || screen.y < 1)
         return;
 
@@ -204,7 +403,10 @@ void Level::drawProjectedTexturedTriangle(Draw *draw, const Vector vertices[3], 
             projected_uv[i * 2] = clipped_uv[index * 2];
             projected_uv[i * 2 + 1] = clipped_uv[index * 2 + 1];
         }
-        draw->fillTexturedTriangle(projected, projected_uv, texture, texture_width, texture_height, tint);
+        if (depthBuffer && !wireframe)
+            depthBuffer->triangle(projected, projected_uv, tint, texture, texture_width, texture_height, draw);
+        else
+            draw->fillTexturedTriangle(projected, projected_uv, texture, texture_width, texture_height, tint);
         if (wireframe)
         {
             for (int i = 0; i < 3; ++i)
@@ -497,6 +699,8 @@ int Level::projectionProject(const Vector triangle[3], float width, float height
 // Render all active entities
 void Level::render(Game *game, bool clamp)
 {
+    if (depthBuffer)
+        depthBuffer->clear();
     // clear the screen and render the entities
     if (clearAllowed)
     {
@@ -1032,5 +1236,34 @@ bool Level::projectBillboard(const Camera &cam, const Vector &epos, float world_
     out_y = static_cast<int16_t>(top + (top < 0 ? -0.5f : 0.5f));
     out_w = static_cast<uint16_t>(w + 0.5f);
     out_h = static_cast<uint16_t>(h + 0.5f);
+    return true;
+}
+
+bool Level::setDepthTestEnabled(bool enabled)
+{
+    if (!enabled)
+    {
+        ENGINE_MEM_DELETE depthBuffer;
+        depthBuffer = nullptr;
+        return true;
+    }
+    if (depthBuffer)
+        return true;
+    if (!gameRef || !gameRef->draw)
+        return false;
+    const Vector screen = gameRef->draw->getDisplaySize();
+    if (!isfinite(screen.x) || !isfinite(screen.y) || screen.x < 1 || screen.y < 1 ||
+        screen.x > 2048 || screen.y > 2048)
+        return false;
+    DepthBuffer *buffer = ENGINE_MEM_NEW DepthBuffer();
+    if (!buffer)
+        return false;
+    if (!buffer->init(static_cast<uint16_t>(screen.x), static_cast<uint16_t>(screen.y)))
+    {
+        ENGINE_MEM_DELETE buffer;
+        return false;
+    }
+    buffer->clear();
+    depthBuffer = buffer;
     return true;
 }
