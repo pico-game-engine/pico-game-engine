@@ -11,6 +11,7 @@
 class Game;
 class Sprite3D;
 class Entity;
+class MeshVisibility;
 
 class Level
 {
@@ -57,6 +58,10 @@ private:
     void drawProjectedTexturedTriangle(Draw *draw, const Vector vertices[3], const float uv[6], const Vector &screen,
                                        const uint16_t *texture, uint16_t texture_width, uint16_t texture_height,
                                        uint16_t tint, bool wireframe);
+    bool renderDepthTestedSprite(const Sprite3D *sprite, Draw *draw, const Vector &position,
+                                 const Vector &direction, float height, const uint16_t *texture,
+                                 uint16_t textureWidth, uint16_t textureHeight);
+    MeshVisibility *meshVisibility;
     float projectionBound(float value, float maximum);
     int projectionClip(const Vector *input, int count, Vector *output, const Vector &normal, float offset);
     float projectionDistance(const Vector &vertex, const Vector &normal, float offset);

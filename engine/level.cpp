@@ -5,6 +5,7 @@
 #include "../engine_config.hpp"
 #include ENGINE_LCD_INCLUDE
 #include <math.h>
+#include "mesh_visibility.hpp"
 
 #ifdef ENGINE_LOG_INCLUDE
 #include ENGINE_LOG_INCLUDE
@@ -14,6 +15,7 @@
 Level::Level()
     : name(""),
       size(Vector(0, 0)),
+      meshVisibility(nullptr),
       clearAllowed(true),
       gameRef(nullptr),
       entity_count(0),
@@ -35,6 +37,7 @@ Level::Level()
 Level::Level(const char *name, const Vector &size, Game *game, CallbackLevel start, CallbackLevel stop)
     : name(name),
       size(size),
+      meshVisibility(nullptr),
       clearAllowed(true),
       gameRef(game),
       entity_count(0),
@@ -86,6 +89,8 @@ void Level::clear()
     ENGINE_MEM_FREE(spriteTriangleDepths);
     spriteTriangleDepths = nullptr;
     spriteTriangleCapacity = 0;
+    ENGINE_MEM_DELETE meshVisibility;
+    meshVisibility = nullptr;
 }
 
 // Get list of collisions for a given entity
@@ -764,6 +769,57 @@ bool Level::isOnScreen(const Entity *entity, const Camera &camera, const Vector 
     return !(sx1 < 0 || sy1 < 0 || sx0 >= screen.x || sy0 >= screen.y);
 }
 
+bool Level::renderDepthTestedSprite(const Sprite3D *sprite, Draw *draw, const Vector &position,
+                                   const Vector &direction, float height, const uint16_t *texture,
+                                   uint16_t textureWidth, uint16_t textureHeight)
+{
+    const Vector screen = draw->getDisplaySize();
+    if (screen.x < 1 || screen.y < 1 || screen.x > 32767 || screen.y > 32767)
+        return false;
+    if (!meshVisibility)
+        meshVisibility = ENGINE_MEM_NEW MeshVisibility();
+    if (!meshVisibility)
+        return false;
+    size_t projectedCount = 0;
+    // Count first, so near-plane clipping only reserves the actual number of
+    // visible triangles rather than twice the entire mesh on constrained heaps.
+    for (int pass = 0; pass < 2; ++pass)
+    {
+        for (uint16_t i = 0; i < sprite->getTriangleCount(); ++i)
+        {
+            Triangle3D triangle; float uv[6];
+            if (!sprite->getTransformedTriangle(i, position, triangle, height))
+                continue;
+            if (triangle.wireframe || !sprite->getTriangleUVs(i, uv))
+                return false;
+            const float xs[3] = {triangle.x1, triangle.x2, triangle.x3};
+            const float ys[3] = {triangle.y1, triangle.y2, triangle.y3};
+            const float zs[3] = {triangle.z1, triangle.z2, triangle.z3};
+            MeshVisibility::Vertex vertices[3];
+            for (int j = 0; j < 3; ++j)
+            {
+                const float x = xs[j] - position.x, z = zs[j] - position.y;
+                vertices[j] = {-x * direction.y + z * direction.x, ys[j] - height,
+                               x * direction.x + z * direction.y, uv[j*2], uv[j*2+1]};
+            }
+            MeshVisibility::Triangle projected[2];
+            const int n = MeshVisibility::project(vertices, triangle.color,
+                static_cast<uint16_t>(screen.x), static_cast<uint16_t>(screen.y), projected);
+            if (pass == 0) projectedCount += n;
+            else for (int j = 0; j < n; ++j) meshVisibility->append(projected[j]);
+        }
+        if (pass == 0 && !meshVisibility->reserve(projectedCount, static_cast<uint16_t>(screen.x)))
+            return false;
+    }
+    meshVisibility->render(static_cast<uint16_t>(screen.x), static_cast<uint16_t>(screen.y),
+        texture, textureWidth, textureHeight,
+        [draw](int x, int y, const uint16_t *pixels, int width) {
+            draw->image(static_cast<uint16_t>(x), static_cast<uint16_t>(y), pixels,
+                        static_cast<uint16_t>(width), 1);
+        });
+    return true;
+}
+
 void Level::render3DSprite(const Sprite3D *sprite3d, Draw *draw, const Vector &player_pos, const Vector &player_dir, float view_height, bool clamp, bool drawShadow)
 {
     if (!sprite3d)
@@ -797,6 +853,15 @@ void Level::render3DSprite(const Sprite3D *sprite3d, Draw *draw, const Vector &p
         }
     }
 #endif
+    // Opaque textured meshes need per-pixel visibility: sorting triangle centers
+    // cannot hide a rear support behind a long foreground triangle.
+    if (sprite3d->isDepthSortEnabled() && texture && !doShadow &&
+        renderDepthTestedSprite(sprite3d, draw, player_pos, player_dir, view_height,
+                               texture, texture_width, texture_height))
+    {
+        ENGINE_MEM_FREE(texture_buffer);
+        return;
+    }
     bool sort_triangles = sprite3d->isDepthSortEnabled() && triangle_count > 1;
     if (sort_triangles && triangle_count > spriteTriangleCapacity)
     {

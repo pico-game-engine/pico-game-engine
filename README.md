@@ -132,6 +132,25 @@ A 3D mesh of up to 64 triangles. Pre-built shapes are available via initializati
 
 Colors are RGB565. The engine applies a shading factor to different faces automatically for built-in shapes.
 
+For an opaque custom mesh whose triangles overlap on screen, enable per-mesh depth sorting:
+
+```cpp
+mesh.setDepthSortEnabled(true);
+```
+
+Sorting is disabled by default. Without it, triangles are drawn in mesh order, so a rear support can be painted over a nearer surface. The setting also applies to textured meshes. It uses additional memory for triangle indices and depths, and adds sorting work each frame.
+
+Opaque textured meshes without wireframe outlines or projected shadows use per-pixel visibility when this option is enabled. The renderer caches visible projected triangles (68 bytes each, retained in blocks of 64 to avoid large contiguous allocations) and reuses one scanline of inverse depths and RGB565 colors (6 bytes per display column), rather than allocating a full-screen depth buffer. Triangles that cross the near plane may produce two cached triangles. Scratch storage is retained by the level and released when it is cleared.
+
+This resolves overlapping triangles within one mesh, including cases where sorting triangle centers gives the wrong order. It does not introduce depth testing between separate entities. Flat-color meshes, wireframe/shadow rendering, or a failed scratch allocation retain the existing painter's-algorithm path and its limitations. UV interpolation remains affine, matching the existing textured-triangle backend.
+
+The standalone visibility regression can be run with:
+
+```sh
+c++ -std=c++11 -O1 -g -fsanitize=address,undefined tests/mesh_visibility.cpp -o /tmp/mesh-visibility-test
+/tmp/mesh-visibility-test
+```
+
 #### `Camera`
 Controls the 3D view. Supports `CAMERA_FIRST_PERSON` and `CAMERA_THIRD_PERSON` perspectives.
 
