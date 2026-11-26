@@ -16,6 +16,29 @@ int main(int argc,char **argv) {
     assert(b.blocksGround(3,4.9f,.01f,3,4,1.57079632679f));
     assert(!b.blocksGround(3.9f,4,.01f,3,4,1.57079632679f));
     assert(b.blocksGround(1.9f,0,0,0,0,0,2));
+    // Both endpoints clear but the full movement crosses the thin box.
+    assert(!b.blocksGround(0,.51f,.25f) && !b.blocksGround(0,-.89f,.25f));
+    assert(b.blocksGroundSegment(0,.51f,0,-.89f,.25f));
+    assert(!b.blocksGroundSegment(1.15f,.4f,1.2f,.4f,.2f)); // rounded corner clearance
+    assert(b.blocksGroundSegment(1.1f,.3f,1.1f,.5f,.2f));
+    assert(b.blocksGroundSegment(-2,0,2,0,0));
+    assert(!b.blocksGroundSegment(-2,1,2,1,.1f));
+    assert(b.blocksGroundSegment(3,1,3,7,.25f,3,4,1.57079632679f,2));
+    assert(!b.blocksGroundSegment(0,0,1,1,-1));
+    for(int ix=-30;ix<=30;++ix) for(int iz=-20;iz<=20;++iz) {
+        const float x=ix*.07f,z=iz*.07f;
+        assert(b.blocksGroundSegment(x,z,x,z,.2f)==b.blocksGround(x,z,.2f));
+    }
+    for(int i=0;i<400;++i) {
+        const float ax=((i*17)%101-50)*.05f,az=((i*29)%101-50)*.05f;
+        const float ex=((i*31)%101-50)*.05f,ez=((i*43)%101-50)*.05f;
+        const bool hit=b.blocksGroundSegment(ax,az,ex,ez,.2f);
+        assert(hit==b.blocksGroundSegment(ex,ez,ax,az,.2f));
+        for(int k=0;k<=200;++k) {
+            const float t=k/200.f;
+            if(b.blocksGround(ax+(ex-ax)*t,az+(ez-az)*t,.2f)) assert(hit);
+        }
+    }
     d=fixture(4);assert(b.load(d.data(),d.size())&&b.count()==4&&b.blocksGround(12,0,0));
     d=fixture(5);assert(!b.load(d.data(),d.size())&&b.count()==4);
     d=fixture(1);assert(!b.load(d.data(),d.size()-1));d[0]='X';assert(!b.load(d.data(),d.size()));
@@ -23,5 +46,5 @@ int main(int argc,char **argv) {
     d=fixture(1);d[8+3]=0x7f;d[8+2]=0xc0;assert(!b.load(d.data(),d.size()));
     d=fixture(0);assert(b.load(d.data(),d.size())&&b.count()==0&&!b.blocksGround(0,0,1));
     if(argc>1) { FILE *f=fopen(argv[1],"rb");assert(f);uint8_t buf[CollisionBoxes::MAX_BYTES];size_t n=fread(buf,1,sizeof(buf),f);fclose(f);assert(b.load(buf,n)&&b.count()==1);assert(b.blocksGround(2,-3,0));assert(!b.blocksGround(20,20,.1f)); }
-    puts("PASS: collider limits, malformed files, rotated/scaled footprints, corners and Blender fixture");
+    puts("PASS: collider limits, malformed files, rotated/scaled footprints, corners, swept movement, point equivalence, 80400 reference samples and Blender fixture");
 }

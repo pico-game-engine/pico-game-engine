@@ -265,3 +265,7 @@ must be positive and uniform. Positive yaw rotates +X toward +Z.
 
 Run `g++ -std=c++11 tests/collision_boxes.cpp -o /tmp/collision-boxes-test` and
 `/tmp/collision-boxes-test` for format, rotation, scaling and boundary tests.
+
+Use `blocksGroundSegment(x0, z0, x1, z1, radius, assetX, assetZ, yaw, scale)`
+for movement. It checks the entire swept circle, preventing fast objects from
+jumping across thin boxes between frames while preserving rounded corners.
