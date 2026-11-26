@@ -20,21 +20,46 @@ struct Level::DepthBuffer
 #ifdef ENGINE_USE_PSRAM
     uint32_t address = TrianglePSRAM::INVALID;
 #endif
+    // Only this interval contains depth values from the current frame.
+    // Reads outside it are zero; disjoint writes also initialize the gap.
+    uint16_t *ranges = nullptr;
     void read(int y, int x, int n)
     {
+        memset(scratch + x, 0, 2 * n);
+        const int left = x > ranges[2 * y] ? x : ranges[2 * y];
+        const int end = x + n < ranges[2 * y + 1] ? x + n : ranges[2 * y + 1];
+        if (left >= end)
+            return;
 #ifdef ENGINE_USE_PSRAM
-        ENGINE_PSRAM_READ(address + 2 * (y * width + x), scratch + x, 2 * n);
+        ENGINE_PSRAM_READ(address + 2 * (y * width + left), scratch + left, 2 * (end - left));
 #else
-        memcpy(scratch + x, depth + y * width + x, 2 * n);
+        memcpy(scratch + left, depth + y * width + left, 2 * (end - left));
 #endif
     }
     void write(int y, int x, int n)
     {
+        int left = x, end = x + n;
+        const int oldLeft = ranges[2 * y], oldEnd = ranges[2 * y + 1];
+        if (oldLeft < oldEnd)
+        {
+            if (end < oldLeft)
+            {
+                memset(scratch + end, 0, 2 * (oldLeft - end));
+                end = oldLeft;
+            }
+            else if (left > oldEnd)
+            {
+                memset(scratch + oldEnd, 0, 2 * (left - oldEnd));
+                left = oldEnd;
+            }
+        }
 #ifdef ENGINE_USE_PSRAM
-        ENGINE_PSRAM_WRITE(address + 2 * (y * width + x), scratch + x, 2 * n);
+        ENGINE_PSRAM_WRITE(address + 2 * (y * width + left), scratch + left, 2 * (end - left));
 #else
-        memcpy(depth + y * width + x, scratch + x, 2 * n);
+        memcpy(depth + y * width + left, scratch + left, 2 * (end - left));
 #endif
+        ranges[2 * y] = oldLeft < oldEnd && oldLeft < left ? oldLeft : left;
+        ranges[2 * y + 1] = oldLeft < oldEnd && oldEnd > end ? oldEnd : end;
     }
     // Positive float ordering is preserved with 11 mantissa bits and five
     // exponent bits. Avoid a reciprocal and two libm clamps for every pixel.
@@ -85,11 +110,12 @@ struct Level::DepthBuffer
     {
         if (!w || !h || w > 2048 || h > 2048 || width)
             return false;
-        scratch = static_cast<uint16_t *>(ENGINE_MEM_MALLOC(w * 5));
+        scratch = static_cast<uint16_t *>(ENGINE_MEM_MALLOC(size_t(w) * 5 + size_t(h) * 4));
         if (!scratch)
             return false;
         colors = scratch + w;
-        covered = reinterpret_cast<uint8_t *>(colors + w);
+        ranges = colors + w;
+        covered = reinterpret_cast<uint8_t *>(ranges + h * 2);
 #ifdef ENGINE_USE_PSRAM
         address = TrianglePSRAM::reserveBytes(uint32_t(w) * h * 2);
         if (address == TrianglePSRAM::INVALID)
@@ -102,13 +128,12 @@ struct Level::DepthBuffer
 #endif
         width = w;
         height = h;
+        clear();
         return true;
     }
     void clear()
     {
-        memset(scratch, 0, width * 2);
-        for (int y = 0; y < height; ++y)
-            write(y, 0, width);
+        memset(ranges, 0, size_t(height) * 4);
     }
     void triangle(const Vector vertices[3], const float uv[6], uint16_t tint, const uint16_t *texture,
                   uint16_t tw, uint16_t th, Draw *draw)
