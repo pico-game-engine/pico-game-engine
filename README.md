@@ -252,3 +252,16 @@ Entity *npc = new Entity(
 npc->set3DSpriteRotation(1.57f);
 level->entity_add(npc);
 ```
+### Optional authored collision boxes
+
+`engine/collision_boxes.hpp` loads Blender-exported PCB1 sidecars into a fixed
+array of at most four upright boxes. No heap allocation is required. A file is
+8 bytes plus 28 bytes per box. Invalid data leaves the existing set unchanged.
+Games own these sets separately from visual entities and explicitly call
+`blocksGround(x, z, radius, assetX, assetZ, yaw, scale)` in movement checks.
+This tests a circle against each rotated footprint, including rounded corner
+distance. Y is height; ground queries intentionally ignore height. Asset scale
+must be positive and uniform. Positive yaw rotates +X toward +Z.
+
+Run `g++ -std=c++11 tests/collision_boxes.cpp -o /tmp/collision-boxes-test` and
+`/tmp/collision-boxes-test` for format, rotation, scaling and boundary tests.
